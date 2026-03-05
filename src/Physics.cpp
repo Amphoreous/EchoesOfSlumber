@@ -13,7 +13,7 @@
 Physics::Physics() : Module()
 {
     world = b2_nullWorldId;
-    debug = false; // toggle with F9
+    debug = false; 
 }
 
 // Destructor
@@ -74,8 +74,6 @@ bool Physics::PreUpdate()
         if (!b2Shape_IsValid(e.shapeIdA) || !b2Shape_IsValid(e.shapeIdB)) continue;
         EndContact(e.shapeIdA, e.shapeIdB);
     }
-
-
     return ret;
 }
 
@@ -198,8 +196,8 @@ bool Physics::PostUpdate()
 
             // Enable only what you support (3.1 field names)
             dd.drawShapes = true;
-            dd.drawJoints = true;   // enable if you want joints drawn
-            dd.drawBounds = true;   // AABBs
+            //dd.drawJoints = true;   // enable if you want joints drawn
+            //dd.drawBounds = true;   // AABBs
             dd.drawContacts = true;   // contact points
 
             // Implemented callbacks
@@ -280,7 +278,7 @@ void Physics::EndContact(b2ShapeId shapeA, b2ShapeId shapeB)
 void Physics::DeletePhysBody(PhysBody* physBody)
 {
 	if (B2_IS_NULL(world)) return; // world already destroyed
-    if (physBody && !B2_IS_NULL(physBody->body) && physBody->listener->active)
+    if (physBody && !B2_IS_NULL(physBody->body) && physBody->listener && physBody->listener->active)
     {
         // Don’t change contact/sensor flags here (can mismatch event buffers).
         // Just clear user data so late events won’t dereference a dangling PhysBody*.
@@ -365,6 +363,7 @@ void PhysBody::SetPosition(int x, int y)
 {
     b2Vec2 pos = { PIXEL_TO_METERS(x), PIXEL_TO_METERS(y) };
     b2Body_SetTransform(body, pos, b2MakeRot(0));
+    b2Body_SetAwake(body, true);
 }
 
 float PhysBody::GetRotation() const

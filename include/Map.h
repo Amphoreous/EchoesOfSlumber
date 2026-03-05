@@ -3,6 +3,7 @@
 #include "Module.h"
 #include <list>
 #include <vector>
+#include "Player.h"
 
 // L09: TODO 5: Add attributes to the property structure
 struct Properties
@@ -52,7 +53,7 @@ struct MapLayer
     // L07: TODO 6: Short function to get the gid value of i,j
     unsigned int Get(int i, int j) const
     {
-        return tiles[(i * width) + j];
+        return tiles[(j * width) + i];
     }
 };
 
@@ -124,7 +125,8 @@ public:
     bool Load(std::string path, std::string mapFileName);
 
     // L07: TODO 8: Create a method that translates x,y coordinates from map positions to world positions
-    Vector2D MapToWorld(int i, int j) const;
+    Vector2D MapToWorld(int x, int y) const;
+    Vector2D WorldToMap(int x, int y);
 
     // L09: TODO 2: Implement function to the Tileset based on a tile id
     TileSet* GetTilesetFromTileId(int gid) const;
@@ -134,6 +136,28 @@ public:
 
 	// L10: TODO 7: Create a method to get the map size in pixels
 	Vector2D GetMapSizeInPixels();
+    Vector2D GetMapSizeInTiles();
+
+    MapLayer* GetNavigationLayer();
+
+    int GetTileWidth() {
+        return mapData.tileWidth;
+    }
+
+    int GetTileHeight() {
+        return mapData.tileHeight;
+    }
+
+    //L15 TODO 2: Define a method to load entities from the map XML
+    void LoadEntities(std::shared_ptr<Player>& player);
+	//L15 TODO 4: Define a method to save entities to the map XML
+    void SaveEntities(std::shared_ptr<Player> player);
+
+	// L19 TODO 1: Calculate Camera position in Tiles
+	Vector2D GetCameraPositionInTiles();
+
+	// L19 TODO 2: Calculate Camera limits in Tiles
+	Vector2D GetCameraLimitsInTiles(Vector2D camPosTile);
 
 public: 
     std::string mapFileName;
@@ -143,4 +167,8 @@ private:
     bool mapLoaded;
     // L06: DONE 1: Declare a variable data of the struct MapData
     MapData mapData;
+	//L15 TODO 2: make the mapFileXML an attribute of the Map class
+    pugi::xml_document mapFileXML;
+    //
+	std::list<PhysBody*> colliderList;
 };

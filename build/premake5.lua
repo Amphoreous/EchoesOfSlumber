@@ -13,6 +13,13 @@ newoption
     default = "auto"
 }
 
+newoption
+{
+    trigger = "discord_sdk_url",
+    value = "URL",
+    description = "Override the Discord Social SDK download URL (for CI or custom hosting)"
+}
+
 function download_progress(total, current)
     local ratio = current / total
     ratio = math.min(math.max(ratio, 0), 1)
@@ -89,6 +96,14 @@ function get_latest_versions()
         sdl3_image = {
             repo = "libsdl-org/SDL_image",
             fallback = "3.0.0"
+        },
+        sdl3_ttf = {
+            repo = "libsdl-org/SDL_ttf",
+            fallback = "3.2.2"
+        },
+        tracy = {
+            repo = "wolfpld/tracy",
+            fallback = "0.11.1"
         }
     }
     
@@ -320,6 +335,163 @@ function check_libpng()
     os.chdir("../")
 end
 
+function check_sdl3_ttf()
+    os.chdir("external")
+    
+    -- Get the cached versions (will fetch only once)
+    local versions = get_latest_versions()
+    local sdl3_ttf_version = versions.sdl3_ttf
+    local sdl3_ttf_folder = "SDL3_ttf-" .. sdl3_ttf_version
+    local sdl3_ttf_zip = "SDL3_ttf-devel-" .. sdl3_ttf_version .. "-VC.zip"
+    
+    if(os.isdir("SDL3_ttf") == false) then
+        if(not os.isfile(sdl3_ttf_zip)) then
+            print("SDL3_ttf v" .. sdl3_ttf_version .. " not found, downloading prebuilt binaries from GitHub")
+            local download_url = "https://github.com/libsdl-org/SDL_ttf/releases/download/release-" .. sdl3_ttf_version .. "/SDL3_ttf-devel-" .. sdl3_ttf_version .. "-VC.zip"
+            local result_str, response_code = http.download(download_url, sdl3_ttf_zip, {
+                progress = download_progress,
+                headers = { "From: Premake", "Referer: Premake" }
+            })
+        end
+        print("Unzipping SDL3_ttf to " .. os.getcwd())
+        zip.extract(sdl3_ttf_zip, os.getcwd())
+        
+        -- Rename the extracted folder to simple name
+        if os.isdir(sdl3_ttf_folder) then
+            os.rename(sdl3_ttf_folder, "SDL3_ttf")
+            print("Renamed " .. sdl3_ttf_folder .. " to SDL3_ttf")
+        end
+        
+        os.remove(sdl3_ttf_zip)
+    else
+        print("SDL3_ttf already exists")
+    end
+    
+    os.chdir("../")
+end
+
+function check_tracy()
+    os.chdir("external")
+    
+    -- Get the cached versions (will fetch only once)
+    local versions = get_latest_versions()
+    local tracy_version = versions.tracy
+    local tracy_folder = "tracy-" .. tracy_version
+    local tracy_zip = tracy_folder .. ".zip"
+    
+    if(os.isdir("tracy") == false) then
+        if(not os.isfile(tracy_zip)) then
+            print("Tracy v" .. tracy_version .. " not found, downloading from GitHub")
+            local download_url = "https://github.com/wolfpld/tracy/archive/refs/tags/v" .. tracy_version .. ".zip"
+            local result_str, response_code = http.download(download_url, tracy_zip, {
+                progress = download_progress,
+                headers = { "From: Premake", "Referer: Premake" }
+            })
+        end
+        print("Unzipping Tracy to " .. os.getcwd())
+        zip.extract(tracy_zip, os.getcwd())
+        
+        -- Rename the extracted folder to simple name
+        if os.isdir(tracy_folder) then
+            os.rename(tracy_folder, "tracy")
+            print("Renamed " .. tracy_folder .. " to tracy")
+        end
+        
+        os.remove(tracy_zip)
+    else
+        print("Tracy already exists")
+    end
+    
+    os.chdir("../")
+end
+
+function check_discord_sdk()
+    os.chdir("external")
+    
+    -- Discord Social SDK configuration
+    -- The SDK is hosted as a GitHub Release asset for automated CI downloads.
+    -- To update the SDK version:
+    --   1. Download the latest from the Discord Developer Portal
+    --   2. Upload the zip as a release asset to your GitHub repo
+    --   3. Update discord_social_sdk_version and discord_social_sdk_url below
+    --
+    -- Expected structure after extraction:
+    --   external/discord_social_sdk/include/discordpp.h
+    --   external/discord_social_sdk/lib/release/discord_partner_sdk.lib   (Windows)
+    --   external/discord_social_sdk/bin/release/discord_partner_sdk.dll   (Windows)
+    --   external/discord_social_sdk/lib/release/libdiscord_partner_sdk.so (Linux)
+    
+    local discord_social_sdk_version = "1.8.14026"
+    local discord_social_sdk_zip = "DiscordSocialSdk-" .. discord_social_sdk_version .. ".zip"
+    
+    -- Download URL: use CLI override, env var, or default to GitHub Release asset
+    local discord_social_sdk_url = _OPTIONS["discord_sdk_url"]
+        or os.getenv("DISCORD_SDK_URL")
+        or "https://github.com/Amphoreous/EchoesOfSlumber/releases/download/discord-social-sdk-v" .. discord_social_sdk_version .. "/" .. discord_social_sdk_zip
+    
+    if not os.isdir("discord_social_sdk") or not os.isdir("discord_social_sdk/include") then
+        if not os.isfile(discord_social_sdk_zip) then
+            print("Discord Social SDK v" .. discord_social_sdk_version .. " not found, downloading...")
+            print("URL: " .. discord_social_sdk_url)
+            local result_str, response_code = http.download(discord_social_sdk_url, discord_social_sdk_zip, {
+                progress = download_progress,
+                headers = { "From: Premake", "Referer: Premake" }
+            })
+            
+            if not os.isfile(discord_social_sdk_zip) then
+                print("")
+                print("============================================================")
+                print("  Discord Social SDK DOWNLOAD FAILED")
+                print("")
+                print("  Could not download from: " .. discord_social_sdk_url)
+                print("")
+                print("  To fix this, either:")
+                print("    1. Upload the SDK zip as a GitHub Release asset at:")
+                print("       https://github.com/Amphoreous/EchoesOfSlumber/releases")
+                print("       Tag: discord-social-sdk-v" .. discord_social_sdk_version)
+                print("")
+                print("    2. Or pass a custom URL:")
+                print("       premake5 vs2022 --discord_sdk_url=\"https://...\"")
+                print("")
+                print("    3. Or set the DISCORD_SDK_URL environment variable")
+                print("")
+                print("    4. Or manually extract to: build/external/discord_social_sdk/")
+                print("============================================================")
+                print("")
+                os.chdir("../")
+                return
+            end
+        end
+        
+        print("Unzipping Discord Social SDK to " .. os.getcwd())
+        zip.extract(discord_social_sdk_zip, os.getcwd())
+        
+        -- The zip may extract to a versioned folder; rename to simple name
+        local versioned_folder = "DiscordSocialSdk-" .. discord_social_sdk_version
+        if os.isdir(versioned_folder) then
+            os.rename(versioned_folder, "discord_social_sdk")
+            print("Renamed " .. versioned_folder .. " to discord_social_sdk")
+        end
+        
+        -- Also handle if it extracts to just "discord_social_sdk" directly
+        -- (no rename needed in that case)
+        
+        os.remove(discord_social_sdk_zip)
+        
+        -- Verify extraction succeeded
+        if not os.isdir("discord_social_sdk/include") then
+            print("WARNING: Discord Social SDK extracted but include/ folder not found.")
+            print("         Check the zip structure and adjust the extraction logic.")
+        else
+            print("Discord Social SDK v" .. discord_social_sdk_version .. " installed successfully")
+        end
+    else
+        print("Discord Social SDK already exists")
+    end
+    
+    os.chdir("../")
+end
+
 function build_externals()
     print("Checking external dependencies...")
     
@@ -343,6 +515,15 @@ function build_externals()
     if downloadBox2D and not os.isdir("external/box2d") then
         all_exist = false
     end
+    if downloadSDL3TTF and not os.isdir("external/SDL3_ttf") then
+        all_exist = false
+    end
+    if downloadTracy and not os.isdir("external/tracy") then
+        all_exist = false
+    end
+    if downloadDiscordSDK and not os.isdir("external/discord_social_sdk/include") then
+        all_exist = false
+    end
     
     -- If all dependencies exist, skip version fetching entirely
     if all_exist then
@@ -361,6 +542,15 @@ function build_externals()
     end
     if (downloadBox2D) then
         check_box2d()
+    end
+    if (downloadSDL3TTF) then
+        check_sdl3_ttf()
+    end
+    if (downloadTracy) then
+        check_tracy()
+    end
+    if (downloadDiscordSDK) then
+        check_discord_sdk()
     end
 end
 
@@ -402,6 +592,19 @@ sdl3_image_dir = "external/SDL3_image"
 downloadLibPNG = true
 libpng_dir = "external/libpng"
 
+downloadSDL3TTF = true
+sdl3_ttf_dir = "external/SDL3_ttf"
+
+downloadTracy = true
+tracy_dir = "external/tracy"
+
+-- Discord Social SDK: auto-downloads from GitHub Release asset.
+-- The SDK zip must be uploaded as a release asset on your repo.
+-- To update: download new version from Discord Developer Portal, upload to GitHub Releases.
+-- Override URL via: --discord_sdk_url="..." or DISCORD_SDK_URL env var.
+downloadDiscordSDK = true
+discord_sdk_dir = "external/discord_social_sdk"
+
 workspaceName = 'PlatformGame'
 baseName = path.getbasename(path.getdirectory(os.getcwd()))
 
@@ -441,7 +644,7 @@ workspace (workspaceName)
 
     targetdir "bin/%{cfg.buildcfg}/"
 
-if (downloadSDL3 or downloadBox2D or downloadLibJPEGTurbo or downloadPugiXML or downloadSDL3Image or downloadLibPNG) then
+if (downloadSDL3 or downloadBox2D or downloadLibJPEGTurbo or downloadPugiXML or downloadSDL3Image or downloadLibPNG or downloadSDL3TTF or downloadTracy or downloadDiscordSDK) then
     build_externals()
 end
 
@@ -480,6 +683,11 @@ end
         includedirs { pugixml_dir .. "/src" }
         includedirs { sdl3_image_dir .. "/include" }
         includedirs { libpng_dir .. "/include" }
+        includedirs { sdl3_ttf_dir .. "/include" }
+        includedirs { tracy_dir .. "/public" }
+        -- Discord Social SDK: single-header API (discordpp.h)
+        -- Uncomment when the SDK is downloaded and downloadDiscordSDK = true
+        -- includedirs { discord_sdk_dir .. "/include" }
 
         cdialect "C17"
         cppdialect "C++17"
@@ -487,9 +695,12 @@ end
 
         filter "action:vs*"
             defines{"_WINSOCK_DEPRECATED_NO_WARNINGS", "_CRT_SECURE_NO_WARNINGS"}
-            dependson {"box2d", "pugixml"}
-            links {"box2d", "pugixml", "SDL3", "SDL3_image", "jpeg", "libpng"}
+            dependson {"box2d", "pugixml", "tracy"}
+            links {"box2d", "pugixml", "tracy", "SDL3", "SDL3_image", "SDL3_ttf", "jpeg", "libpng"}
+            -- Discord Social SDK: uncomment when enabled
+            -- links { "discord_partner_sdk" }
             characterset ("Unicode")
+            buildoptions { "/Zc:__cplusplus" }
 
         filter "system:windows"
             defines{"_WIN32"}
@@ -497,22 +708,32 @@ end
             
             -- SDL3 x64 específic
             filter { "system:windows", "platforms:x64" }
-                libdirs { "../bin/%{cfg.buildcfg}", sdl3_dir .. "/lib/x64", sdl3_image_dir .. "/lib/x64", libjpeg_turbo_dir .. "/lib", libpng_dir .. "/lib" }
+                libdirs { "../bin/%{cfg.buildcfg}", sdl3_dir .. "/lib/x64", sdl3_image_dir .. "/lib/x64", sdl3_ttf_dir .. "/lib/x64", libjpeg_turbo_dir .. "/lib", libpng_dir .. "/lib" }
+                -- Discord Social SDK: uncomment when enabled
+                -- libdirs { discord_sdk_dir .. "/lib/release" }
                 postbuildcommands {
                     -- Copy DLLs using xcopy with proper quoting for paths with spaces
                     'xcopy /Y /D "$(SolutionDir)build\\external\\SDL3\\lib\\x64\\SDL3.dll" "$(SolutionDir)bin\\%{cfg.buildcfg}\\" 2>nul || exit 0',
                     'xcopy /Y /D "$(SolutionDir)build\\external\\SDL3_image\\lib\\x64\\SDL3_image.dll" "$(SolutionDir)bin\\%{cfg.buildcfg}\\" 2>nul || exit 0',
+                    'xcopy /Y /D "$(SolutionDir)build\\external\\SDL3_ttf\\lib\\x64\\SDL3_ttf.dll" "$(SolutionDir)bin\\%{cfg.buildcfg}\\" 2>nul || exit 0',
                     'xcopy /Y /D "$(SolutionDir)build\\external\\libjpeg-turbo\\bin\\jpeg62.dll" "$(SolutionDir)bin\\%{cfg.buildcfg}\\" 2>nul || exit 0'
+                    -- Discord Social SDK: uncomment when enabled
+                    -- 'xcopy /Y /D "$(SolutionDir)build\\external\\discord_social_sdk\\bin\\release\\discord_partner_sdk.dll" "$(SolutionDir)bin\\%{cfg.buildcfg}\\" 2>nul || exit 0'
                 }
                 
             -- SDL3 x86 específic
             filter { "system:windows", "platforms:x86" }
-                libdirs { "../bin/%{cfg.buildcfg}", sdl3_dir .. "/lib/x86", sdl3_image_dir .. "/lib/x86", libjpeg_turbo_dir .. "/lib", libpng_dir .. "/lib" }
+                libdirs { "../bin/%{cfg.buildcfg}", sdl3_dir .. "/lib/x86", sdl3_image_dir .. "/lib/x86", sdl3_ttf_dir .. "/lib/x86", libjpeg_turbo_dir .. "/lib", libpng_dir .. "/lib" }
+                -- Discord Social SDK: uncomment when enabled
+                -- libdirs { discord_sdk_dir .. "/lib/release" }
                 postbuildcommands {
                     -- Copy DLLs using xcopy with proper quoting for paths with spaces
                     'xcopy /Y /D "$(SolutionDir)build\\external\\SDL3\\lib\\x86\\SDL3.dll" "$(SolutionDir)bin\\%{cfg.buildcfg}\\" 2>nul || exit 0',
-                    'xcopy /Y /D "$(SolutionDir)build\\external\\SDL3_image\\lib\\x86\\SDL3_image.dll" "$(SolutionDir)bin\\%{cfg.buildcfg)\\" 2>nul || exit 0',
+                    'xcopy /Y /D "$(SolutionDir)build\\external\\SDL3_image\\lib\\x86\\SDL3_image.dll" "$(SolutionDir)bin\\%{cfg.buildcfg}\\" 2>nul || exit 0',
+                    'xcopy /Y /D "$(SolutionDir)build\\external\\SDL3_ttf\\lib\\x86\\SDL3_ttf.dll" "$(SolutionDir)bin\\%{cfg.buildcfg}\\" 2>nul || exit 0',
                     'xcopy /Y /D "$(SolutionDir)build\\external\\libjpeg-turbo\\bin\\jpeg62.dll" "$(SolutionDir)bin\\%{cfg.buildcfg}\\" 2>nul || exit 0'
+                    -- Discord Social SDK: uncomment when enabled
+                    -- 'xcopy /Y /D "$(SolutionDir)build\\external\\discord_social_sdk\\bin\\release\\discord_partner_sdk.dll" "$(SolutionDir)bin\\%{cfg.buildcfg}\\" 2>nul || exit 0'
                 }
 
         filter "system:linux"
@@ -578,3 +799,91 @@ end
         }
         
         filter{}
+
+    project "tracy"
+        kind "StaticLib"
+        
+        location "build_files/"
+        
+        language "C++"
+        cppdialect "C++17"
+        targetdir "../bin/%{cfg.buildcfg}"
+        
+        -- TRACY_ENABLE activates profiling; remove this define to compile out all Tracy calls
+        defines { "TRACY_ENABLE" }
+        
+        filter "action:vs*"
+            defines{"_WINSOCK_DEPRECATED_NO_WARNINGS", "_CRT_SECURE_NO_WARNINGS"}
+            characterset ("Unicode")
+            buildoptions { "/Zc:__cplusplus" }
+        filter{}
+        
+        includedirs { tracy_dir .. "/public" }
+        
+        vpaths
+        {
+            ["Header Files"] = { tracy_dir .. "/public/tracy/**.hpp", tracy_dir .. "/public/tracy/**.h" },
+            ["Source Files"] = { tracy_dir .. "/public/TracyClient.cpp" },
+        }
+        files {
+            tracy_dir .. "/public/tracy/Tracy.hpp",
+            tracy_dir .. "/public/tracy/TracyC.h",
+            tracy_dir .. "/public/TracyClient.cpp"
+        }
+        
+        filter "system:windows"
+            links { "ws2_32", "dbghelp", "advapi32", "user32" }
+        
+        filter "system:linux"
+            links { "pthread", "dl" }
+        
+        filter{}
+
+    -- Discord Social SDK project (commented out until SDK is downloaded)
+    -- The Social SDK uses a single header-only API (discordpp.h).
+    -- To enable:
+    --   1. Set downloadDiscordSDK = true above
+    --   2. Download the SDK from the Discord Developer Portal
+    --   3. Extract to build/external/discord_social_sdk/
+    --   4. Uncomment this project and the Discord lines in the main project above
+    --   5. Create a .cpp file with: #define DISCORDPP_IMPLEMENTATION \n #include "discordpp.h"
+    --
+    -- Unlike the old Game SDK, the Social SDK doesn't need a separate static lib.
+    -- Just include discordpp.h and link discord_partner_sdk.lib/.dll directly.
+    --
+    --[[
+    -- Example: if you prefer a thin static lib to isolate the implementation define:
+    project "discord_social_sdk"
+        kind "StaticLib"
+        language "C++"
+        cppdialect "C++17"
+        
+        location "build_files/"
+        targetdir "../bin/%{cfg.buildcfg}"
+        
+        defines { "DISCORDPP_IMPLEMENTATION" }
+        
+        includedirs { discord_sdk_dir .. "/include" }
+        
+        files { 
+            discord_sdk_dir .. "/include/discordpp.h",
+            "../src/discord/**.cpp",
+            "../src/discord/**.h"
+        }
+        
+        filter "action:vs*"
+            defines { "_WINSOCK_DEPRECATED_NO_WARNINGS", "_CRT_SECURE_NO_WARNINGS" }
+            characterset ("Unicode")
+            buildoptions { "/Zc:__cplusplus" }
+            
+        filter "system:windows"
+            defines { "_WIN32" }
+            libdirs { discord_sdk_dir .. "/lib/release" }
+            links { "discord_partner_sdk" }
+            
+        filter "system:linux"
+            libdirs { discord_sdk_dir .. "/lib/release" }
+            links { "discord_partner_sdk" }
+            
+        filter {}
+    --]]

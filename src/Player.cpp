@@ -9,6 +9,7 @@
 #include "Physics.h"
 #include "EntityManager.h"
 #include "Map.h"
+#include "tracy/Tracy.hpp"
 
 Player::Player() : Entity(EntityType::PLAYER)
 {
@@ -20,9 +21,6 @@ Player::~Player() {
 }
 
 bool Player::Awake() {
-
-	//L03: TODO 2: Initialize Player parameters
-	position = Vector2D(96, 96);
 	return true;
 }
 
@@ -56,6 +54,7 @@ bool Player::Start() {
 
 bool Player::Update(float dt)
 {
+	ZoneScoped;
 	GetPhysicsValues();
 	Move();
 	Jump();
@@ -80,7 +79,7 @@ void Player::GetPhysicsValues() {
 }
 
 void Player::Move() {
-	
+
 	// Move left/right
 	if (Engine::GetInstance().input->GetKey(SDL_SCANCODE_A) == KEY_REPEAT) {
 		velocity.x = -speed;
@@ -124,10 +123,16 @@ void Player::Draw(float dt) {
 
 	//L10: TODO 7: Center the camera on the player
 	Vector2D mapSize = Engine::GetInstance().map->GetMapSizeInPixels();
-	float limitLeft = Engine::GetInstance().render->camera.w / 4;
-	float limitRight = mapSize.getX() - Engine::GetInstance().render->camera.w * 3 / 4;
+	float limitLeft = (float)Engine::GetInstance().render->camera.w / 4;
+	float limitRight = (float)mapSize.getX() - Engine::GetInstance().render->camera.w * 3 / 4;
 	if (position.getX() - limitLeft > 0 && position.getX() < limitRight) {
-		Engine::GetInstance().render->camera.x = -position.getX() + Engine::GetInstance().render->camera.w / 4;
+		Engine::GetInstance().render->camera.x = (int) - position.getX() + (int)(Engine::GetInstance().render->camera.w / 4);
+	}
+	else if( position.getX() <= limitLeft) {
+		Engine::GetInstance().render->camera.x = 0;
+	}
+	else {
+		Engine::GetInstance().render->camera.x = -(float)mapSize.getX() + Engine::GetInstance().render->camera.w;
 	}
 
 	// L10: TODO 5: Draw the player using the texture and the current animation frame
@@ -138,6 +143,7 @@ bool Player::CleanUp()
 {
 	LOG("Cleanup player");
 	Engine::GetInstance().textures->UnLoad(texture);
+	Engine::GetInstance().physics->DeletePhysBody(pbody);
 	return true;
 }
 
@@ -182,3 +188,21 @@ void Player::OnCollisionEnd(PhysBody* physA, PhysBody* physB)
 	}
 }
 
+Vector2D Player::GetPosition() {
+	int x, y;
+	pbody->GetPosition(x, y);
+	// Adjust for center
+	return Vector2D((float)x - texW / 2, (float)y - texH / 2);
+}
+
+void Player::SetPosition(Vector2D pos) {
+	pbody->SetPosition((int)(pos.getX() + texW / 2), (int)(pos.getY() + texH / 2));
+}
+
+bool Player::Destroy()
+{
+	LOG("Destroying Player");
+	active = false;
+	pendingToDelete = true;
+	return true;
+}
