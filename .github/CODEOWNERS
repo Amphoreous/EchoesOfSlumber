@@ -1,54 +1,57 @@
 # CODEOWNERS — Echoes of Slumber (Hidden Dream Studio)
 # Defines automatic PR reviewers based on file type/location.
+# Uses TEAM handles (@HiddenDreamStudio/<team>) so any team member with
+# write access is a valid reviewer. Individual handles only where the user
+# has write access (org owner / maintainer).
 # Docs: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
 
 # ──────────────────────────────────────────────
-# DEFAULT: Lead Dev reviews everything by default
+# DEFAULT: Leads team reviews everything by default
 # ──────────────────────────────────────────────
-*                           @TheUnrealZaka
+*                           @HiddenDreamStudio/leads-reviewers
 
 # ──────────────────────────────────────────────
-# ENGINE / CODE (.cpp, .h) → Dev Engineers lead + Lead Dev
+# ENGINE / CODE (.cpp, .h) → Dev Engineers team + Lead Dev
 # ──────────────────────────────────────────────
-/src/                       @TheUnrealZaka
-/include/                   @TheUnrealZaka
-*.cpp                       @TheUnrealZaka
-*.h                         @TheUnrealZaka
+/src/                       @TheUnrealZaka @HiddenDreamStudio/dev-engineers
+/include/                   @TheUnrealZaka @HiddenDreamStudio/dev-engineers
+*.cpp                       @TheUnrealZaka @HiddenDreamStudio/dev-engineers
+*.h                         @TheUnrealZaka @HiddenDreamStudio/dev-engineers
 
 # ──────────────────────────────────────────────
-# ART ASSETS → Lead Art (Dóttir) reviews
+# ART ASSETS → Art Creators team
 # ──────────────────────────────────────────────
-/assets/textures/           @dottircheong
-/assets/sprites/            @dottircheong
-*.png                       @dottircheong
-*.jpg                       @dottircheong
-*.bmp                       @dottircheong
+/assets/textures/           @HiddenDreamStudio/art-creators
+/assets/sprites/            @HiddenDreamStudio/art-creators
+*.png                       @HiddenDreamStudio/art-creators
+*.jpg                       @HiddenDreamStudio/art-creators
+*.bmp                       @HiddenDreamStudio/art-creators
 
 # ──────────────────────────────────────────────
-# AUDIO → Lead Art reviews (no dedicated audio lead)
+# AUDIO → Art Creators team (no dedicated audio lead)
 # ──────────────────────────────────────────────
-/assets/audio/              @dottircheong
+/assets/audio/              @HiddenDreamStudio/art-creators
 
 # ──────────────────────────────────────────────
-# LEVEL DESIGN (Tiled maps) → Lead Game Design (Montse)
+# LEVEL DESIGN (Tiled maps) → Design & Production team
 # ──────────────────────────────────────────────
-/assets/maps/               @montse4
-*.tmx                       @montse4
-*.tsx                       @montse4
+/assets/maps/               @HiddenDreamStudio/design-and-prod
+*.tmx                       @HiddenDreamStudio/design-and-prod
+*.tsx                       @HiddenDreamStudio/design-and-prod
 
 # ──────────────────────────────────────────────
-# BUILD SYSTEM & CI → Lead Dev
+# BUILD SYSTEM & CI → Lead Dev + Leads
 # ──────────────────────────────────────────────
-/build/                     @TheUnrealZaka
-/.github/                   @TheUnrealZaka
+/build/                     @TheUnrealZaka @HiddenDreamStudio/leads-reviewers
+/.github/                   @TheUnrealZaka @HiddenDreamStudio/leads-reviewers
 *.bat                       @TheUnrealZaka
 *.lua                       @TheUnrealZaka
 
 # ──────────────────────────────────────────────
-# DOCUMENTATION → Producers review
+# DOCUMENTATION → Producers team
 # ──────────────────────────────────────────────
-*.md                        @bruno0135 @juliaaunion
-/docs/                      @bruno0135 @juliaaunion
+*.md                        @HiddenDreamStudio/producers
+/docs/                      @HiddenDreamStudio/producers
 
 # ──────────────────────────────────────────────
 # CONFIG → Lead Dev
