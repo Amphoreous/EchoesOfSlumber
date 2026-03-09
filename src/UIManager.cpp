@@ -71,6 +71,7 @@ bool UIManager::CleanUp()
 	{
 		uiElement->CleanUp();
 	}
+	UIElementsList.clear();
 
 	return true;
 }

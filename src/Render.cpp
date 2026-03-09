@@ -95,7 +95,7 @@ bool Render::Update(float dt)
 
 bool Render::PostUpdate()
 {
-	SDL_SetRenderDrawColor(renderer, background.r, background.g, background.g, background.a);
+	SDL_SetRenderDrawColor(renderer, background.r, background.g, background.b, background.a);
 	SDL_RenderPresent(renderer);
 	return true;
 }
@@ -331,11 +331,21 @@ bool Render::DrawText(const char* text, int x, int y, int w, int h, SDL_Color co
 	return true;
 }
 
-// L19 TODO 4: Create a method to know if a rectangle is inside the camera frustum
+// Camera frustum culling: returns true if the world-space rect is visible on screen
 bool Render::IsOnScreenWorldRect(float x, float y, float w, float h, int margin) const
 {
-	bool result = false;
-	return result;
+	float camX = -camera.x;
+	float camY = -camera.y;
+	float screenW = static_cast<float>(camera.w);
+	float screenH = static_cast<float>(camera.h);
+
+	// Check if rect is outside the camera viewport (with margin)
+	if (x + w + margin < camX) return false;
+	if (x - margin > camX + screenW) return false;
+	if (y + h + margin < camY) return false;
+	if (y - margin > camY + screenH) return false;
+
+	return true;
 }
 
 

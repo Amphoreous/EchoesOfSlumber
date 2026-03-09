@@ -121,7 +121,7 @@ bool Scene::CleanUp()
 Vector2D Scene::GetPlayerPosition()
 {
 	if (player) return player->GetPosition();
-	else Vector2D(0,0);
+	else return Vector2D(0,0);
 }
 
 // *********************************************

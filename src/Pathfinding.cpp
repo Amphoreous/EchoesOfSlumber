@@ -240,9 +240,9 @@ void Pathfinding::PropagateDijkstra() {
     }
 
     //If frontier queue contains elements pop the first element and find the neighbors
-    if (frontier.size() > 0 && !foundDestination) {
+    if (frontierDijkstra.size() > 0 && !foundDestination) {
 
-        //Get the value of the firt element in the queue
+        //Get the value of the first element in the queue
         Vector2D frontierTile = frontierDijkstra.top().second;
         //remove the first element from the queue
         frontierDijkstra.pop();

@@ -131,14 +131,21 @@ bool EntityManager::Update(float dt)
 
 bool EntityManager::PostUpdate() {
 
-	//Iterates over the entities and calls Update
-	for (const auto entity : entities)
+	// Collect entities pending deletion first, then destroy
+	// (never modify the list while iterating - causes UB)
+	std::list<std::shared_ptr<Entity>> pendingDelete;
+
+	for (const auto& entity : entities)
 	{
-		//If the entity is marked for deletion, add it to the pendingDelete list
 		if (entity->pendingToDelete)
 		{
-			DestroyEntity(entity);
+			pendingDelete.push_back(entity);
 		}
+	}
+
+	for (const auto& entity : pendingDelete)
+	{
+		DestroyEntity(entity);
 	}
 
 	return true;
