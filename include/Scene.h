@@ -92,4 +92,8 @@ private:
 
 	// L17 TODO 1: Current scene attribute with initial value
 	SceneID currentScene = SceneID::MAIN_MENU;
+
+	// Deferred scene change to avoid use-after-free when called from UI callbacks
+	bool hasPendingSceneChange = false;
+	SceneID pendingScene = SceneID::MAIN_MENU;
 };

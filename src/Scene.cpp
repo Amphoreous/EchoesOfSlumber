@@ -48,6 +48,12 @@ bool Scene::PreUpdate()
 // Called each loop iteration
 bool Scene::Update(float dt)
 {
+	// Apply deferred scene change (safe here, outside UI callbacks)
+	if (hasPendingSceneChange) {
+		hasPendingSceneChange = false;
+		ChangeScene(pendingScene);
+	}
+
 	switch (currentScene)
 	{
 	case SceneID::INTRO_SCREEN:
@@ -180,7 +186,7 @@ void Scene::UnloadCurrentScene() {
 
 void Scene::LoadMainMenu() {
 
-	Engine::GetInstance().audio->PlayMusic("Assets/Audio/Music/retro-gaming-short-248416.wav");
+	Engine::GetInstance().audio->PlayMusic("Assets/Audio/Music/level-iv-339695.wav");
 
 	// Instantiate a UIButton in the Scene
 	SDL_Rect btPos = { 520, 350, 120,20 };
@@ -200,7 +206,9 @@ void Scene::HandleMainMenuUIEvents(UIElement* uiElement)
 	{
 	case 1: // Button MyButton
 		LOG("Main Menu: MyButton clicked!");
-		ChangeScene(SceneID::LEVEL1);
+		// Defer scene change to avoid use-after-free (we're inside UIButton::Update)
+		hasPendingSceneChange = true;
+		pendingScene = SceneID::LEVEL1;
 		break;
 	default:
 		break;
@@ -220,6 +228,13 @@ void Scene::LoadLevel1() {
 
 	//Call the function to load entities from the map
 	Engine::GetInstance().map->LoadEntities(player);
+
+	// If the map didn't contain an Entities object group, create the player manually
+	if (player == nullptr) {
+		player = std::dynamic_pointer_cast<Player>(Engine::GetInstance().entityManager->CreateEntity(EntityType::PLAYER));
+		player->position = Vector2D(96, 672);
+		player->Start();
+	}
 
 	//Create a new item using the entity manager and set the position to (200, 672) to test
 	std::shared_ptr<Item> item = std::dynamic_pointer_cast<Item>(Engine::GetInstance().entityManager->CreateEntity(EntityType::ITEM));
